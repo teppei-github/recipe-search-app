@@ -1,27 +1,51 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import SearchBar from '../components/SearchBar';
-import RecipeResults from '../components/RecipeResults';
-import '../components/Style.css'
-import FavoriteButton from '../components/FavoritesButton';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import SearchBar from "../components/SearchBar";
+import RecipeResults from "../components/RecipeResults";
+import "../components/Style.css";
+import FavoriteButton from "../components/FavoritesButton";
 
 export default function RecipePage() {
-    const navigate = useNavigate();
-    const [results, setResults] = useState(null);
-    
+  const [data, setData] = useState([]);
+  const [isLoading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-    const handleSearch = (query) => {
-        console.log(query);
-        navigate(`/search?query=${encodeURIComponent(query)}`);
-        setResults(['レシピ1', 'レシピ1', 'レシピ1']);
-    };
+  const handleSearch = async (query) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `https://app.rakuten.co.jp/services/api/Recipe/CategoryList/20170426?applicationId=1048012658384045599&categoryType=large${
+          query ? `&query=${query}` : ""
+        }`
+      );
 
-    return (
-        <div>
-            <h1>食材で選ぶ</h1>
-            <SearchBar onSearch={handleSearch} />
-            <RecipeResults result={results} />
-            <FavoriteButton />
-        </div>
-    )
-} 
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+
+      const result = await response.json();
+      console.log("result1", result);
+      console.log("result2", result.result.large);
+      setData(result.result.large || []);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <h1>食材で選ぶ</h1>
+      <SearchBar onSearch={handleSearch} />
+      {isLoading ? (
+        <p>ローディング中</p>
+      ) : error ? (
+        <p>{error}</p>
+      ) : (
+        <RecipeResults result={data} />
+      )}
+      <FavoriteButton />
+    </div>
+  );
+}
